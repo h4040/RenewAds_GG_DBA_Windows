@@ -1,4 +1,6 @@
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxBinary;
 import org.openqa.selenium.firefox.FirefoxDriver;
@@ -50,7 +52,7 @@ public class Main {
                 renewDBA(driver);
                 break;
             case 2:
-                ggLogin(driver);
+                ggLogin(driver, true);
                 renewGG(driver);
                 break;
 //            case 3:
@@ -141,15 +143,17 @@ public class Main {
         }
     }
 
-    private static void ggLogin(FirefoxDriver driver) {
+    private static void ggLogin(FirefoxDriver driver, boolean cookiePolicyIsEnabled) {
         // load web page from url above
         driver.get(GG_URL);
 
         // Log in to website
         try {
-            wait.until(ExpectedConditions.elementToBeClickable(By.id("onetrust-accept-btn-handler")));
-            WebElement cookiePolicyPopUpBtn = driver.findElement(By.id("onetrust-accept-btn-handler"));
-            cookiePolicyPopUpBtn.click();
+            if (cookiePolicyIsEnabled) {
+                wait.until(ExpectedConditions.elementToBeClickable(By.id("onetrust-accept-btn-handler")));
+                WebElement cookiePolicyPopUpBtn = driver.findElement(By.id("onetrust-accept-btn-handler"));
+                cookiePolicyPopUpBtn.click();
+            }
 
             // Get the login overlay window to show up
             driver.get(GG_URL);
@@ -161,25 +165,29 @@ public class Main {
             WebElement password = driver.findElement(By.name("password"));
             password.sendKeys("(6DWnM]E;Rv=za*3}c*<");
 
-            wait.until(ExpectedConditions.elementToBeClickable(By.xpath("/html/body/div[1]/div[2]/div/div/article/div[1]/div[2]/section/div/form/button")));
-            WebElement loginBtn = driver.findElement(By.xpath("/html/body/div[1]/div[2]/div/div/article/div[1]/div[2]/section/div/form/button"));
+            String loginBtnXpath = "/html/body/div[1]/div/div[2]/div[1]/div/article/div[1]/div[2]/section/div/form/button/span[1]";
+
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath(loginBtnXpath)));
+            WebElement loginBtn = driver.findElement(By.xpath(loginBtnXpath));
             loginBtn.click();
         } catch (Exception ex) {
             System.out.println("CATCH (during login): " + ex.getMessage());
-            driver.close();
-            driver.quit();
+            ggLogin(driver, false);
+
+            //driver.close();
+            //driver.quit();
         }
     }
 
     private static void renewGG(FirefoxDriver driver) {
         try {
             while (true) {
-                String fornyBtnText = "/html/body/div[1]/div[5]/div/div/div[2]/div/div[2]/div[2]/div[1]/article/div[2]/div[3]/button/span";
+                String fornyBtnText = "/html/body/div[1]/div/div[4]/div/div/div[2]/div/div[2]/div[2]/div[1]/article/div[2]/div[3]/button/span";
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath(fornyBtnText)));
                 driver.findElement(By.xpath(fornyBtnText)).click();
 
                 Thread.sleep(5000);
-                String descriptionTextField = "/html/body/div[1]/div[5]/main/div[1]/section[2]/div[2]/div/fieldset/div[2]/label/span/textarea";
+                String descriptionTextField = "/html/body/div[1]/div/div[4]/main/div[1]/section[2]/div[2]/div/fieldset/div[2]/label/span/textarea";
                 wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(descriptionTextField)));
                 String description = driver.findElement(By.xpath(descriptionTextField)).getText();
 
@@ -189,18 +197,20 @@ public class Main {
                     driver.findElement(By.xpath(descriptionTextField)).sendKeys(overskrift);
                 }
 
-                //String gratisAnonceBtnText = "/html/body/div[1]/div[5]/main/div[1]/section[4]/div[2]/div/section/div/div/div/div[3]/div/button/span";
-                String gratisAnnonceBtnText = "/html/body/div[1]/div[5]/main/div[1]/section[4]/div[2]/div/section/div/div/div/div[3]/div/button/span";
+                JavascriptExecutor js = (JavascriptExecutor) driver;
+                js.executeScript("window.scrollBy(0,document.body.scrollHeight)");
+
+                String gratisAnnonceBtnText = "/html/body/div[1]/div/div[4]/main/div[1]/section[4]/div[2]/div/section/div/div/div/div[3]/div/button/span";
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath(gratisAnnonceBtnText)));
                 driver.findElement(By.xpath(gratisAnnonceBtnText)).click();
 
-                String opretAnnonceText = "/html/body/div[1]/div[5]/main/div[1]/section[5]/div[2]/div/div/button/span[1]";
+                String opretAnnonceText = "/html/body/div[1]/div/div[4]/main/div[1]/section[5]/div[2]/div/div/button/span[1]";
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath(opretAnnonceText)));
                 driver.findElement(By.xpath(opretAnnonceText)).click();
 
                 // sleep a bit just to be sure the request was sent to server before navigating away from page
                 Thread.sleep(5000);
-                String seAnnoncenText = "/html/body/div[1]/div[2]/div[21]/div/article/div/div[2]/section/div/div[2]/div[2]/a[1]/span";
+                String seAnnoncenText = "/html/body/div[1]/div/div[2]/div[21]/div/article/div/div[2]/section/div/div[2]/div[2]/a[1]/span";
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath(seAnnoncenText)));
 
                 // get back to overview of inactive ads
@@ -215,7 +225,6 @@ public class Main {
                 renewGG(driver);
             } else {
                 // closes the current window the WebDriver is currently controlling.
-                //System.out.println("Closing with error count: " + errorCount);
                 driver.close();
                 driver.quit();
             }
@@ -223,19 +232,10 @@ public class Main {
             // will throw exception when there are no more ads to renew
             System.out.println("CATCH (General Exception): " + ex.getMessage());
 
-            //String gratisAnonnceBtnTextError = "Expected condition failed: waiting for element to be clickable: By.xpath: /html/body/div[1]/div[5]/main/div[1]/section[4]/div[2]/div/section/div/div/div/div[3]/div/button/span (tried for 60 second(s) with 500 MILLISECONDS interval)";
-            //String fornyBtnTextError = "Expected condition failed: waiting for element to be clickable: By.xpath: /html/body/div[1]/div[5]/div/div/div[2]/div/div[2]/div[2]/div[1]/article/div[2]/div[3]/button/span (tried for 60 second(s) with 500 MILLISECONDS interval)";
-
-            // sometimes the web page containing the list of inactve ads till return 0 by mistake. Keep reloading the page 3 times before giving up.
-//            if (errorCount < 4 && (ex.getMessage().equals(gratisAnonnceBtnTextError) || ex.getMessage().equals(fornyBtnTextError))) {
-//                driver.navigate().to(GG_URL);
-//                renewGG(driver);
-//                errorCount++;
-//            }
             if (errorCount < 10 ) {
+                errorCount++;
                 driver.navigate().to(GG_URL);
                 renewGG(driver);
-                errorCount++;
             }
             else if (ex.getMessage().toLowerCase().contains("gallup")) {
                 driver.navigate().to(GG_URL);
