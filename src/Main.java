@@ -21,23 +21,9 @@ public class Main {
     private static int errorCount = 0;
 
     public static void main(String[] args) {
-        System.out.println("SELECT WHICH ADS TO RENEW");
-        System.out.println("[1] DBA");
-        System.out.println("[2] GG");
-        //System.out.println("[3] Faerdiggoer GG");
-        Scanner keyboard = new Scanner(System.in);
-        int answer = keyboard.nextInt();
-
-        while (answer != 1 && answer != 2) {
-            System.out.println("Invalid selection.");
-            answer = keyboard.nextInt();
-        }
-
         // Create a new instance of the Firefox driver
         System.setProperty("webdriver.gecko.driver", "D:\\IntelliJProjects\\RenewGG_Ads-master\\lib3.4\\geckodriver.exe");
-        //File pathToFirefox = new File("D:\\Program Files\\Firefox\\firefox.exe");
         File pathToFirefox = new File("C:\\Program Files\\Mozilla Firefox\\firefox.exe");
-        //File pathToFirefox = new File("/usr/bin/firefox");
 
         FirefoxBinary firefoxBinary = new FirefoxBinary(pathToFirefox);
         FirefoxProfile firefoxProfile = new FirefoxProfile();
@@ -46,38 +32,55 @@ public class Main {
 
         wait = new WebDriverWait(driver, 60);
 
-        switch (answer) {
-            case 1:
-                dbaLogin(driver);
-                renewDBA(driver);
-                break;
-            case 2:
-                ggLogin(driver, true);
-                renewGG(driver);
-                break;
-//            case 3:
-//                finishGG(driver);
-        }
+        //dbaLogin(driver);
+        driver.get(DBA_URL);
+        delay(30000);
+        renewDBA(driver);
     }
 
     private static void dbaLogin(FirefoxDriver driver) {
         // load web page from url above
         driver.get(DBA_URL);
 
+        // pop-up
+        //wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//*[@id=\"onetrust-accept-btn-handler\"]")));
+        //driver.findElement(By.xpath("//*[@id=\"onetrust-accept-btn-handler\"]")).click();
+
+        delay(1500);
+
+        // Fortsæt button
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("/html/body/div[1]/div/div/div[4]/a[2]")));
+        driver.findElement(By.xpath("/html/body/div[1]/div/div/div[4]/a[2]")).click();
+
+        delay(1500);
+
         // Log in to the web site
-        WebElement email = driver.findElement(By.id("Email"));
+        WebElement email = driver.findElement(By.id("email"));
         email.sendKeys("tonnyb@gmail.com");
-        WebElement password = driver.findElement(By.id("Password"));
-        password.sendKeys("hyldevang50");
-        WebElement loginBtn = driver.findElement(By.id("LoginButton"));
+
+        // Give human time to click "I'm not a robot"
+        delay(10000);
+
+        // Næste
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("/html/body/div[1]/div/div/div/form/div[2]/div[3]/button/span[1]")));
+        driver.findElement(By.xpath("/html/body/div[1]/div/div/div/form/div[2]/div[3]/button/span[1]")).click();
+
+        wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//*[@id=\"password\"]")));
+        driver.findElement(By.xpath("//*[@id=\"password\"]")).click();
+        driver.findElement(By.xpath("//*[@id=\"password\"]")).sendKeys("Th8zYKDHaKi6r9V");
+
+        // Give human time to click "I'm not a robot"
+        delay(10000);
+
+        WebElement loginBtn = driver.findElement(By.id("ActionButton_0"));
+
+        wait.until(ExpectedConditions.elementToBeClickable(By.id("ActionButton_0")));
         loginBtn.click();
     }
 
     private static void renewDBA(FirefoxDriver driver) {
-        try {
             while (true) {
                 // Wait for 'Genindryk' buttons to be loaded and be clickable(?)
-                //WebDriverWait wait = new WebDriverWait(driver, 20);
                 wait.until(ExpectedConditions.elementToBeClickable(By.linkText("Genindryk")));
 
                 // Click on 'Genindryk' button now that it's loaded and clickable
@@ -88,7 +91,7 @@ public class Main {
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath("/html/body/div[1]/div/div[2]/section[3]/div[1]/div[1]/h3")));
                 WebElement revealKontaktOplysninger = driver.findElement(By.xpath("/html/body/div[1]/div/div[2]/section[3]/div[1]/div[1]/h3"));
                 driver.executeScript("arguments[0].click();", revealKontaktOplysninger);
-                Thread.sleep(1500);
+                delay(1500);
 
                 // Don't allow people to ask questions by text
                 wait.until(ExpectedConditions.elementToBeClickable(By.id("QuestionsAndAnswersEnabled")));
@@ -103,44 +106,12 @@ public class Main {
                 driver.executeScript("arguments[0].click();", nextButton);
 
                 // sleep a bit just to be sure the request was sent to server before navigating away from page
-                Thread.sleep(4000);
+                delay(4000);
 
                 // go back to list of ads to renew
                 driver.navigate().to(DBA_URL);
             }
-        } catch (org.openqa.selenium.NoSuchElementException ex) {
-            System.out.println("CATCH from noSuchElement: " + ex.getMessage());
 
-            if (!ex.getMessage().toLowerCase().contains("genindryk")) {
-                driver.navigate().to(DBA_URL);
-                renewDBA(driver);
-            }
-        } catch (org.openqa.selenium.TimeoutException ex) {
-            System.out.println("Inside timeOut exception");
-            System.out.println(ex.getMessage());
-
-            if (ex.getMessage().equals("Expected condition failed: waiting for element to be clickable: By.linkText: Genindryk (tried for 20 second(s) with 500 MILLISECONDS interval)")) {
-                System.out.println("-------------------\n!!! THERE ARE NO MORE ADS TO RENEW !!!\n-------------------\n");
-                // time to quit the app because there are no more ads to renew
-                driver.close();
-                driver.quit();
-            } else {
-                driver.navigate().refresh();
-                driver.navigate().to(DBA_URL);
-                renewDBA(driver);
-            }
-        } catch (Exception ex) {
-            System.out.println("CATCH from general exception: " + ex.getMessage());
-            //System.out.println("Get cause toString:" + ex.getCause().toString()); causes NPE
-
-            if (ex.getMessage().toLowerCase().contains("gallup")) {
-                driver.navigate().to(DBA_URL);
-                renewDBA(driver);
-            } else {
-                driver.close();
-                driver.quit();
-            }
-        }
     }
 
     private static void ggLogin(FirefoxDriver driver, boolean cookiePolicyIsEnabled) {
@@ -182,7 +153,7 @@ public class Main {
     private static void renewGG(FirefoxDriver driver) {
         try {
             while (true) {
-                String fornyBtnText = "/html/body/div[1]/div/div[4]/div/div/div[2]/div/div[2]/div[2]/div[1]/article/div[2]/div[3]/button/span";
+                String fornyBtnText = "/html/body/div[1]/div/div[4]/div[1]/div[2]/div[2]/div[2]/div[2]/div[1]/article/div[2]/div[3]/button";
                 wait.until(ExpectedConditions.elementToBeClickable(By.xpath(fornyBtnText)));
                 driver.findElement(By.xpath(fornyBtnText)).click();
 
@@ -210,8 +181,8 @@ public class Main {
 
                 // sleep a bit just to be sure the request was sent to server before navigating away from page
                 Thread.sleep(5000);
-                String seAnnoncenText = "/html/body/div[1]/div/div[2]/div[21]/div/article/div/div[2]/section/div/div[2]/div[2]/a[1]/span";
-                wait.until(ExpectedConditions.elementToBeClickable(By.xpath(seAnnoncenText)));
+//                String seAnnoncenText = "/html/body/div[1]/div/div[4]/div[1]/div[2]/div[2]/div[2]/div[2]/div[1]/article/div[2]/div[3]/button";
+//                wait.until(ExpectedConditions.elementToBeClickable(By.xpath(seAnnoncenText)));
 
                 // get back to overview of inactive ads
                 driver.get(GG_URL);
@@ -247,4 +218,13 @@ public class Main {
             }
         }
     }
+
+    private static void delay(int ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (Exception ex) {
+            System.out.println("Exception during thread sleep at login");
+        }
+    }
+
 }
